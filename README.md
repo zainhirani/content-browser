@@ -43,75 +43,73 @@ npm run lint       # next lint
 
 ## Architecture
 
-The code is organised **feature-first** (a feature owns its components/hooks/services/types) on top of a one-directional **clean-architecture** dependency chain. Each layer only knows about the one below it, so any layer can be swapped without touching the others.
+The catalog's non-UI core is packaged as a **module** (`modules/catalog`) exposed through a single barrel, and the UI is **feature-sliced** (`features/catalog`, `features/player`). Together they form a one-directional dependency chain — UI → module hooks → API client → HTTP route → business logic → data access — so any layer can be swapped without touching the ones above it.
 
 ```
 src/
-├── app/                       # Next.js routes only (thin)
-│   ├── api/{titles,titles/[id],categories}/route.ts   # HTTP boundary (BFF)
-│   ├── title/[id]/{page,not-found}.tsx
-│   ├── loading.tsx            # app-level loader shown during route transitions
-│   ├── error.tsx              # app-level error boundary with retry
-│   └── {page,layout,providers,globals.css}
+├── app/                              # Next.js routes only (thin)
+│   ├── api/{titles, titles/[id], categories}/route.ts   # HTTP boundary (BFF) → @/modules/catalog
+│   ├── title/[id]/{page, not-found}.tsx
+│   ├── loading.tsx                   # app-level loader shown during route transitions
+│   ├── error.tsx                     # app-level error boundary with retry
+│   └── page · layout · providers · globals.css
 │
-├── features/
-│   ├── catalog/               # browse/search/filter/detail domain
-│   │   ├── components/        # content-card, content-grid, search-bar, category-filter, …
-│   │   ├── hooks/             # use-titles (infinite), use-title, use-categories, use-continue-watching
-│   │   ├── services/          # catalog.service.ts — business logic (search/filter/paginate/suggest)
-│   │   ├── repositories/      # catalog.repository.ts — data-access seam
-│   │   ├── views/             # browse-view, title-detail-view (page-level orchestration)
-│   │   ├── types/ · constants/
-│   └── player/                # HLS playback domain
-│       ├── components/video-player.tsx     # presentational
-│       ├── hooks/use-hls-player.ts         # playback lifecycle
-│       ├── services/player.service.ts      # native-vs-hls.js capability policy
-│       └── types/
+├── modules/
+│   └── catalog/                      # the catalog module's core, behind one barrel (@/modules/catalog)
+│       ├── index.ts                  #   public API — re-exports the files below
+│       ├── api.ts                    #   business logic: list/search/filter/paginate, lookup, param parsing
+│       ├── query.ts                  #   React Query hooks: useTitles (infinite), useTitle, useCategories
+│       ├── repository.ts             #   data-access seam (reads @/constants/catalog)
+│       └── types.ts                  #   Title, Category, CatalogQuery, TitleListResult, Filters
 │
-├── shared/                    # cross-feature, feature-agnostic
-│   ├── components/ui/         # button, input, badge, spinner, states
-│   ├── hooks/                 # use-debounced-value
-│   ├── lib/                   # api-client, query-keys, format
-│   └── constants/             # routes
+├── features/                         # UI, organised by feature
+│   ├── catalog/
+│   │   ├── components/               #   content-card, content-grid, search-bar, category-filter, continue-watching-row
+│   │   └── views/                    #   browse-view, title-detail-view (page-level orchestration)
+│   └── player/
+│       ├── components/video-player.tsx   # presentational
+│       └── services/player.service.ts    # native-vs-hls.js capability policy
 │
-├── infrastructure/            # outside world
-│   ├── data/catalog.data.ts            # bundled mock data source
-│   └── storage/continue-watching.storage.ts   # localStorage persistence
-│
-└── tests/
+├── components/ui/                    # shared primitives: button, input, badge, spinner, states
+├── hooks/                            # shared hooks: use-debounced-value, use-hls-player, use-continue-watching
+├── lib/                              # api-client (HTTP), format, continue-watching (localStorage persistence)
+├── constants/                        # catalog.ts (mock data source), constants.tsx (CATEGORIES)
+├── types/                            # player.types.ts
+└── tests/                            # catalog.service.test.ts
 ```
 
 ### Request flow
 
 ```
-view → feature hook (React Query) → shared/lib/api-client ──HTTP──▶ app/api/* route
-                                                                        │
-                                          catalog.service (business logic)
-                                                                        │
-                                          catalog.repository (data access)
-                                                                        │
-                                          infrastructure/data (mock source)
+view (features/) → React Query hook (modules/catalog/query) → lib/api-client ──HTTP──▶ app/api/* route
+                                                                                            │
+                                                       modules/catalog/api (business logic)
+                                                                                            │
+                                                       modules/catalog/repository (data access)
+                                                                                            │
+                                                       constants/catalog (mock data source)
 ```
 
 ### Why this split?
 
 The brief asked for decoupled, independently-replaceable modules rather than a monolith. Concretely:
 
-- **Features are self-contained.** `catalog` and `player` own their components/hooks/services, so a feature can grow (or be lifted out) without rippling across `components/` and `hooks/` god-folders.
-- **Business rules live in one place** (`catalog.service`), defined once and unit-tested with no React or HTTP.
-- **The data source is replaceable.** `catalog.repository` is the only thing that knows where titles come from; today it reads `infrastructure/data`, tomorrow a DB or a TMDB client + mapper — nothing above it changes.
-- **The transport is replaceable.** Views never call `fetch`; they go through hooks → `api-client`. The API routes are a **backend-for-frontend** that keeps any future provider key server-side.
-- **The player is a bounded context.** `player.service` decides native-HLS vs hls.js, `use-hls-player` owns the lifecycle, and the component stays presentational.
+- **The catalog module hides its internals behind one barrel.** Routes, views, and tests import only `@/modules/catalog`; how it splits types / data access / business logic / query hooks internally is private and can change without rippling out.
+- **Business rules live in one place** (`modules/catalog/api.ts`) — search/filter/paginate/lookup/param-parsing — defined once and unit-tested with no React or HTTP.
+- **The data source is replaceable.** `repository.ts` is the only thing that knows where titles come from; today it reads `constants/catalog.ts`, tomorrow a DB or a TMDB client + mapper — nothing above it changes.
+- **The transport is replaceable.** Views never call `fetch`; they go through the module's hooks → `lib/api-client`. The API routes are a **backend-for-frontend** that keeps any future provider key server-side.
+- **UI is feature-sliced.** `features/catalog` and `features/player` own their components/views; genuinely cross-cutting pieces live in `components/ui`, `hooks`, and `lib`.
+- **The player is a bounded context.** `player.service` decides native-HLS vs hls.js, `use-hls-player` owns the lifecycle, and `video-player` stays presentational.
 
-> **One deliberate boundary call:** `api-client`/`query-keys` are catalog-specific but live in `shared/lib` per the agreed structure; they touch catalog types only at the type level. They could equally sit under `features/catalog/api`.
+> **Note on the catalog's two homes:** the catalog spans `modules/catalog` (its non-UI core) and `features/catalog` (its UI). The module is the stable, importable contract; the feature folder is just where its screens live.
 
 ## Key decisions & trade-offs
 
-- **Mock data over TMDB.** I used a curated local catalog so the app runs offline with zero API keys and deterministic results, but structured it behind a repository/service boundary so wiring in a real provider is a one-file change. Trade-off: a fixed, small catalog.
+- **Mock data over TMDB.** I used a curated local catalog so the app runs offline with zero API keys and deterministic results, but structured it behind the `repository` boundary so wiring in a real provider is a one-file change. Trade-off: a fixed, small catalog.
 - **Rendering strategy.**
-  - **Detail pages are statically generated** (`generateStaticParams`). The catalog is known at build time, so pre-rendering gives fast, cacheable loads and good SEO/metadata per title. On the server the page calls the catalog service *directly* (no HTTP hop) and passes the result to the client view as React Query `initialData`, so there's no loading flash.
+  - **Detail pages are statically generated** (`generateStaticParams`). The catalog is known at build time, so pre-rendering gives fast, cacheable loads and good SEO/metadata per title. On the server the page calls the catalog module *directly* (`getTitleById` / `getAllTitleIds`, no HTTP hop) and passes the result to the client view as React Query `initialData`, so there's no loading flash.
   - **The browse page is a static shell with client-side data fetching.** Search/filter are inherently interactive, and React Query gives instant, cached, debounced updates with `keepPreviousData` so the grid doesn't flash on each keystroke.
-- **API routes are still used by the browse page** even though server components *could* call the service directly. Keeping a real HTTP boundary demonstrates the service/transport separation and makes the client data layer realistic (loading/error/retry).
+- **API routes are still used by the browse page** even though server components *could* call the module directly. Keeping a real HTTP boundary demonstrates the logic/transport separation and makes the client data layer realistic (loading/error/retry).
 - **Continue watching stores a minimal slice** (id, title, thumbnail, progress) rather than the whole title, guarded for SSR and corrupt JSON. Progress is throttled to ~5s writes. Reopening a title **resumes from the saved fraction**: the player seeks on `loadedmetadata` (when `duration` is known for both native and hls.js playback) and only once per mount, so it never fights the user's own seeking. Positions past 95% are treated as finished and start from the beginning. Trade-off: it's best-effort and per-browser, not synced.
 - **hls.js + native HLS.** Safari plays `.m3u8` natively; everywhere else hls.js (via Media Source Extensions) handles it. The player surfaces only *fatal* errors so transient network hiccups don't blank the UI. The in-player loading overlay is opaque on purpose, so the browser's own buffering spinner doesn't show through as a second loader.
 - **Navigation feedback via `app/loading.tsx`.** Clicking a card triggers a client-side route transition; the App Router shows this app-level loader instantly while the destination renders, then unmounts before the page paints — so it never coexists with the video's own loader.
@@ -119,11 +117,11 @@ The brief asked for decoupled, independently-replaceable modules rather than a m
 
 ## Testing
 
-`src/tests/catalog.service.test.ts` covers the catalog service: search, category filter, combined AND semantics, pagination (page boundaries, `hasMore`), lookup-by-id, and param validation — the core logic, tested without spinning up the framework.
+`src/tests/catalog.service.test.ts` covers the catalog module's core logic (`modules/catalog/api.ts`): search, category filter, combined AND semantics, pagination (page boundaries, `hasMore`), lookup-by-id, and param validation — tested directly, without spinning up the framework.
 
 ## Possible next steps
 
-- Real provider (TMDB) behind the existing repository interface.
-- Resume playback from the saved `continue watching` position.
+- Real provider (TMDB) behind the existing `repository` interface.
 - URL-synced search/filter/page state (shareable links).
 - Auto infinite-scroll (IntersectionObserver) as an alternative to the "Load more" button.
+- A shared route-builder (`routes.title(id)`) so detail-page URLs are defined once rather than as inline strings.
