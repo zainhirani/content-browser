@@ -120,10 +120,3 @@ The brief asked for decoupled, independently-replaceable modules rather than a m
 ## Testing
 
 `src/tests/catalog.service.test.ts` covers the catalog module's core logic (`modules/catalog/service.ts`): search, category filter, combined AND semantics, pagination (page boundaries, `hasMore`), lookup-by-id, and param validation — tested directly, without spinning up the framework.
-
-## Possible next steps
-
-- Real provider (TMDB) behind the existing `repository` interface.
-- URL-synced search/filter/page state (shareable links).
-- Auto infinite-scroll (IntersectionObserver) as an alternative to the "Load more" button.
-- A shared route-builder (`routes.title(id)`) so detail-page URLs are defined once rather than as inline strings.
