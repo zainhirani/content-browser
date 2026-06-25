@@ -20,7 +20,7 @@ A small video-streaming "content browser" built with **Next.js (App Router) + Ty
 | -------------- | ------------------------------- |
 | Framework      | Next.js 14 (App Router)         |
 | Language       | TypeScript (strict)             |
-| Data fetching  | TanStack React Query v5         |
+| Data fetching  | TanStack React Query v5 + axios |
 | Styling        | Tailwind CSS                    |
 | Video          | hls.js + native HLS             |
 | Testing        | Vitest + Testing Library        |
@@ -45,34 +45,36 @@ npm run lint       # next lint
 
 The catalog's non-UI core is packaged as a **module** (`modules/catalog`) exposed through a single barrel, and the UI is **feature-sliced** (`features/catalog`, `features/player`). Together they form a one-directional dependency chain — UI → module hooks → API client → HTTP route → business logic → data access — so any layer can be swapped without touching the ones above it.
 
+Leaf folders expose a barrel `index.ts`, so imports are folder-level (`@/components/ui`, `@/hooks`, `@/lib`, `@/modules/catalog`, …) rather than reaching into individual files. (The lone exception is the axios instance, imported directly as `@/utils/axios`.)
+
 ```
 src/
 ├── app/                              # Next.js routes only (thin)
 │   ├── api/{titles, titles/[id], categories}/route.ts   # HTTP boundary (BFF) → @/modules/catalog
 │   ├── title/[id]/{page, not-found}.tsx
-│   ├── loading.tsx                   # app-level loader shown during route transitions
+│   ├── loading.tsx                   # app-level loader during route transitions
 │   ├── error.tsx                     # app-level error boundary with retry
 │   └── page · layout · providers · globals.css
 │
 ├── modules/
-│   └── catalog/                      # the catalog module's core, behind one barrel (@/modules/catalog)
-│       ├── index.ts                  #   public API — re-exports the files below
-│       ├── api.ts                    #   business logic: list/search/filter/paginate, lookup, param parsing
-│       ├── query.ts                  #   React Query hooks: useTitles (infinite), useTitle, useCategories
-│       ├── repository.ts             #   data-access seam (reads @/constants/catalog)
+│   └── catalog/                      # catalog module — index.ts barrel re-exports:
+│       ├── service.ts                #   server business logic: list/search/filter/paginate, lookup, param parsing
+│       ├── api.ts                    #   browser HTTP client (uses @/utils/axios): getTitles / getTitle / getCategories
+│       ├── queries.ts                #   React Query hooks: useTitles (infinite), useTitle, useCategories
+│       ├── repository.ts             #   data-access seam (reads @/constants)
 │       └── types.ts                  #   Title, Category, CatalogQuery, TitleListResult, Filters
 │
-├── features/                         # UI, organised by feature
+├── features/                         # UI, feature-sliced (each folder has a barrel)
 │   ├── catalog/
 │   │   ├── components/               #   content-card, content-grid, search-bar, category-filter, continue-watching-row
 │   │   └── views/                    #   browse-view, title-detail-view (page-level orchestration)
 │   └── player/
-│       ├── components/video-player.tsx   # presentational
-│       └── services/player.service.ts    # native-vs-hls.js capability policy
+│       └── components/video-player.tsx   # presentational; lifecycle lives in @/hooks/use-hls-player
 │
+├── utils/axios.ts                    # the single axios instance + request/response interceptors
 ├── components/ui/                    # shared primitives: button, input, badge, spinner, states
-├── hooks/                            # shared hooks: use-debounced-value, use-hls-player, use-continue-watching
-├── lib/                              # api-client (HTTP), format, continue-watching (localStorage persistence)
+├── hooks/                            # shared hooks: use-debounced-value, use-continue-watching, use-hls-player
+├── lib/                              # format, continue-watching (localStorage), helper (hls.js capability check)
 ├── constants/                        # catalog.ts (mock data source), constants.tsx (CATEGORIES)
 ├── types/                            # player.types.ts
 └── tests/                            # catalog.service.test.ts
@@ -81,25 +83,25 @@ src/
 ### Request flow
 
 ```
-view (features/) → React Query hook (modules/catalog/query) → lib/api-client ──HTTP──▶ app/api/* route
-                                                                                            │
-                                                       modules/catalog/api (business logic)
-                                                                                            │
-                                                       modules/catalog/repository (data access)
-                                                                                            │
-                                                       constants/catalog (mock data source)
+view (features/) → React Query hook (modules/catalog/queries) → modules/catalog/api → @/utils/axios ──HTTP──▶ app/api/* route
+                                                                                                                  │
+                                                                     modules/catalog/service (business logic)
+                                                                                                                  │
+                                                                     modules/catalog/repository (data access)
+                                                                                                                  │
+                                                                     constants/catalog (mock data source)
 ```
 
 ### Why this split?
 
 The brief asked for decoupled, independently-replaceable modules rather than a monolith. Concretely:
 
-- **The catalog module hides its internals behind one barrel.** Routes, views, and tests import only `@/modules/catalog`; how it splits types / data access / business logic / query hooks internally is private and can change without rippling out.
-- **Business rules live in one place** (`modules/catalog/api.ts`) — search/filter/paginate/lookup/param-parsing — defined once and unit-tested with no React or HTTP.
+- **The catalog module hides its internals behind one barrel.** Routes, views, and tests import only `@/modules/catalog`; how it splits types / data access / server logic / HTTP client / query hooks internally is private and can change without rippling out.
+- **Business rules live in one place** (`modules/catalog/service.ts`) — search/filter/paginate/lookup/param-parsing — defined once and unit-tested with no React or HTTP.
 - **The data source is replaceable.** `repository.ts` is the only thing that knows where titles come from; today it reads `constants/catalog.ts`, tomorrow a DB or a TMDB client + mapper — nothing above it changes.
-- **The transport is replaceable.** Views never call `fetch`; they go through the module's hooks → `lib/api-client`. The API routes are a **backend-for-frontend** that keeps any future provider key server-side.
+- **The transport is replaceable.** Views never make HTTP calls directly; they go through the module's hooks (`queries.ts`) → its HTTP client (`api.ts`) → a single configured axios instance (`@/utils/axios`). A **response interceptor** unwraps `response.data` (so callers get the body, not the `AxiosResponse`) and normalises failures into a rejected error React Query can render; a **request interceptor** is the single seam for headers/auth. The API routes are a **backend-for-frontend** that keeps any future provider key server-side.
 - **UI is feature-sliced.** `features/catalog` and `features/player` own their components/views; genuinely cross-cutting pieces live in `components/ui`, `hooks`, and `lib`.
-- **The player is a bounded context.** `player.service` decides native-HLS vs hls.js, `use-hls-player` owns the lifecycle, and `video-player` stays presentational.
+- **The player is a bounded context.** `lib/helper` decides native-HLS vs hls.js, `use-hls-player` owns the lifecycle, and `video-player` stays presentational.
 
 > **Note on the catalog's two homes:** the catalog spans `modules/catalog` (its non-UI core) and `features/catalog` (its UI). The module is the stable, importable contract; the feature folder is just where its screens live.
 
@@ -117,7 +119,7 @@ The brief asked for decoupled, independently-replaceable modules rather than a m
 
 ## Testing
 
-`src/tests/catalog.service.test.ts` covers the catalog module's core logic (`modules/catalog/api.ts`): search, category filter, combined AND semantics, pagination (page boundaries, `hasMore`), lookup-by-id, and param validation — tested directly, without spinning up the framework.
+`src/tests/catalog.service.test.ts` covers the catalog module's core logic (`modules/catalog/service.ts`): search, category filter, combined AND semantics, pagination (page boundaries, `hasMore`), lookup-by-id, and param validation — tested directly, without spinning up the framework.
 
 ## Possible next steps
 

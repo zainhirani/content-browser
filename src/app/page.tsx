@@ -1,6 +1,6 @@
-import { BrowseView } from "@/features/catalog/views/browse-view";
+import { BrowseView } from "@/features/catalog/views";
 
-export default function HomePage() {
+const HomePage = () => {
   return (
     <>
       <h1 className="mb-4 text-2xl font-bold tracking-tight">Browse</h1>
@@ -8,3 +8,5 @@ export default function HomePage() {
     </>
   );
 }
+
+export default HomePage;

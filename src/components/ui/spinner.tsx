@@ -1,4 +1,4 @@
-export function Spinner({ label = "Loading" }: { label?: string }) {
+const Spinner = ({ label = "Loading" }: { label?: string }) => {
   return (
     <span
       role="status"
@@ -7,3 +7,5 @@ export function Spinner({ label = "Loading" }: { label?: string }) {
     />
   );
 }
+
+export default Spinner;

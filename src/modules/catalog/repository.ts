@@ -1,5 +1,5 @@
-import type { Title } from "./index";
 import { CATALOG } from "@/constants/catalog";
+import type { Title } from "./types";
 
 export const catalogRepository = {
   getAll(): readonly Title[] {

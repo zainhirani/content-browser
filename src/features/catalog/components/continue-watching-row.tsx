@@ -2,17 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { WatchEntry } from "@/lib/continue-watching";
+import type {WatchEntry} from "@/lib/continue-watching";
 
 interface ContinueWatchingRowProps {
   entries: WatchEntry[];
   onRemove: (id: string) => void;
 }
 
-export function ContinueWatchingRow({
+const ContinueWatchingRow = ({
   entries,
   onRemove,
-}: ContinueWatchingRowProps) {
+}: ContinueWatchingRowProps) => {
   if (entries.length === 0) return null;
 
   return (
@@ -58,3 +58,5 @@ export function ContinueWatchingRow({
     </section>
   );
 }
+
+export default ContinueWatchingRow;

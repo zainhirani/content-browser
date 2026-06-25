@@ -1,6 +1,6 @@
 import type { Category } from "@/modules/catalog";
 
-export const CATEGORIES: readonly Category[] = [
+export const CATEGORIES: Category[] = [
   "Action",
   "Comedy",
   "Drama",

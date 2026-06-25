@@ -3,16 +3,18 @@
 import { useMemo, useState } from "react";
 import type { Category } from "@/modules/catalog";
 import { useTitles, useCategories } from "@/modules/catalog";
-import { useContinueWatching } from "@/hooks/use-continue-watching";
-import { SearchBar } from "../components/search-bar";
-import { CategoryFilter } from "../components/category-filter";
-import { ContentGrid, ContentGridSkeleton } from "../components/content-grid";
-import { ContinueWatchingRow } from "../components/continue-watching-row";
+import {
+  SearchBar,
+  CategoryFilter,
+  ContentGrid,
+  ContentGridSkeleton,
+  ContinueWatchingRow,
+} from "../components";
+import { Button, EmptyState, ErrorState } from "@/components/ui";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { Button } from "@/components/ui/button";
-import { EmptyState, ErrorState } from "@/components/ui/states";
+import { useContinueWatching } from "@/hooks/use-continue-watching";
 
-export function BrowseView() {
+const BrowseView = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<Category | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -86,3 +88,5 @@ export function BrowseView() {
     </div>
   );
 }
+
+export default BrowseView;

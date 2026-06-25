@@ -11,13 +11,12 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     "border border-white/15 bg-surface-raised text-neutral-100 hover:bg-surface-hover",
 };
-
-export function Button({
+const Button = ({
   variant = "primary",
   className = "",
   type = "button",
   ...props
-}: ButtonProps) {
+}: ButtonProps) => {
   return (
     <button
       type={type}
@@ -26,3 +25,5 @@ export function Button({
     />
   );
 }
+
+export default Button;

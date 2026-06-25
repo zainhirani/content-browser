@@ -5,13 +5,11 @@ import { useCallback, useRef } from "react";
 import type { Title } from "@/modules/catalog";
 import { useTitle } from "@/modules/catalog";
 import { useContinueWatching } from "@/hooks/use-continue-watching";
-import { VideoPlayer } from "@/features/player/components/video-player";
-import { Badge } from "@/components/ui/badge";
+import { VideoPlayer } from "@/features/player/components";
+import { Badge } from "@/components/ui";
 import { formatRuntime, formatScore } from "@/lib/format";
 
-export function TitleDetailView({
-  title: initialTitle,
-}: Readonly<{ title: Title }>) {
+const TitleDetailView = ({ title: initialTitle }: Readonly<{ title: Title }>) => {
   const { data: title } = useTitle(initialTitle.id, initialTitle);
   const { entries, upsert } = useContinueWatching();
 
@@ -72,3 +70,5 @@ export function TitleDetailView({
     </div>
   );
 }
+
+export default TitleDetailView;

@@ -8,7 +8,7 @@ export interface WatchEntry {
   updatedAt: number;
 }
 
-export function loadContinueWatching(): WatchEntry[] {
+export const loadContinueWatching = (): WatchEntry[] => {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -20,7 +20,7 @@ export function loadContinueWatching(): WatchEntry[] {
   }
 }
 
-export function saveContinueWatching(entries: WatchEntry[]): void {
+export const saveContinueWatching = (entries: WatchEntry[]): void => {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));

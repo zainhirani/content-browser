@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { ErrorState } from "@/components/ui/states";
+import { ErrorState } from "@/components/ui";
 
-export default function ErrorBoundary({
+const ErrorBoundary = ({
   error,
   reset,
-}: Readonly<{ error: Error & { digest?: string }; reset: () => void }>) {
+}: Readonly<{ error: Error & { digest?: string }; reset: () => void }>) => {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -18,3 +18,5 @@ export default function ErrorBoundary({
     />
   );
 }
+
+export default ErrorBoundary;

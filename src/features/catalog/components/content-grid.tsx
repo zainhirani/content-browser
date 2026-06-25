@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
 import type { Title } from "@/modules/catalog";
-import { ContentCard } from "./content-card";
+import {ContentCard } from "./index";
 
-function Grid({ children }: { children: ReactNode }) {
+const Grid = ({ children }: { children: ReactNode }) => {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-4">
       {children}
     </div>
   );
-}
+};
 
-export function ContentGrid({ titles }: { titles: Title[] }) {
+const ContentGrid = ({ titles }: { titles: Title[] }) => {
   return (
     <Grid>
       {titles.map((title) => (
@@ -20,7 +20,7 @@ export function ContentGrid({ titles }: { titles: Title[] }) {
   );
 }
 
-export function ContentGridSkeleton({ count = 10 }: { count?: number }) {
+const ContentGridSkeleton = ({ count = 10 }: { count?: number }) => {
   return (
     <Grid>
       {Array.from({ length: count }).map((_, i) => (
@@ -35,3 +35,5 @@ export function ContentGridSkeleton({ count = 10 }: { count?: number }) {
     </Grid>
   );
 }
+
+export { ContentGrid, ContentGridSkeleton };

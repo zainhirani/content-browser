@@ -1,13 +1,13 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-export function SearchBar({ value, onChange }: SearchBarProps) {
+const SearchBar = ({ value, onChange }: SearchBarProps) => {
   return (
     <div className="relative">
       <label htmlFor="search" className="sr-only">
@@ -36,3 +36,5 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
     </div>
   );
 }
+
+export default SearchBar;

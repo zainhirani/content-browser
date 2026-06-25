@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Title } from "@/modules/catalog";
-import {
-  loadContinueWatching,
-  saveContinueWatching,
-  type WatchEntry,
-} from "@/lib/continue-watching";
+import { loadContinueWatching, saveContinueWatching, WatchEntry } from "@/lib/continue-watching";
 
 const MAX_ENTRIES = 12;
 
-export function useContinueWatching() {
+export const useContinueWatching = () => {
   const [entries, setEntries] = useState<WatchEntry[]>([]);
 
   useEffect(() => {

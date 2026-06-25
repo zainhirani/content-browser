@@ -2,40 +2,27 @@
 
 import { useEffect, useRef } from "react";
 import { useHlsPlayer } from "@/hooks/use-hls-player";
-import type { VideoPlayerProps } from "@/types/player.types";
-import { Spinner } from "@/components/ui/spinner";
+import type { VideoPlayerProps } from "@/types";
+import { Spinner } from "@/components/ui";
 
-/** Don't bother resuming a title that was effectively finished. */
 const RESUME_MAX = 0.95;
 
-/**
- * Presentational HLS video player. The playback lifecycle lives in
- * `useHlsPlayer`; this component renders the `<video>`, the loading/error
- * overlays driven by `status`, forwards playback progress to `onProgress`, and
- * resumes from `startAt` once metadata is ready.
- *
- * The loading overlay is opaque on purpose: a translucent one would let the
- * browser's own buffering indicator show through, so the user would see two
- * spinners at once.
- */
-export function VideoPlayer({
+const VideoPlayer = ({
   src,
   poster,
   startAt,
   onProgress,
-}: Readonly<VideoPlayerProps>) {
+}: Readonly<VideoPlayerProps>) => {
   const { videoRef, status } = useHlsPlayer(src);
 
-  // Keep the latest onProgress without re-subscribing on every render.
   const onProgressRef = useRef(onProgress);
   useEffect(() => {
     onProgressRef.current = onProgress;
   }, [onProgress]);
 
-  // Resume only once per mount, even though `startAt` may update as we save.
   const hasResumed = useRef(false);
 
-  function handleTimeUpdate() {
+  const handleTimeUpdate = () => {
     const video = videoRef.current;
     if (!video || !onProgressRef.current) return;
     const { currentTime, duration } = video;
@@ -43,9 +30,7 @@ export function VideoPlayer({
     onProgressRef.current(currentTime / duration);
   }
 
-  // `loadedmetadata` guarantees `duration` is known, for both native and
-  // hls.js playback, so it's the right moment to seek to the saved position.
-  function handleLoadedMetadata() {
+  const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (hasResumed.current || !video?.duration) return;
     hasResumed.current = true;
@@ -82,3 +67,5 @@ export function VideoPlayer({
     </div>
   );
 }
+
+export default VideoPlayer;

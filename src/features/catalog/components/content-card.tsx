@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Title } from "@/modules/catalog";
 import { formatScore } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui";
 
-export function ContentCard({ title }: { title: Title }) {
+const ContentCard = ({ title }: { title: Title }) => {
   return (
     <Link
       href={`/title/${title.id}`}
@@ -37,3 +37,5 @@ export function ContentCard({ title }: { title: Title }) {
     </Link>
   );
 }
+
+export default ContentCard;

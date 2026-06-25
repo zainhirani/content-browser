@@ -2,10 +2,10 @@
 
 import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
-import { resolvePlaybackMode } from "@/features/player/services/player.service";
-import type { PlayerStatus } from "@/types/player.types";
+import { resolvePlaybackMode } from "@/lib/helper";
+import type { PlayerStatus } from "@/types";
 
-export function useHlsPlayer(src: string) {
+export const useHlsPlayer = (src: string) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<PlayerStatus>("loading");
 

@@ -5,7 +5,7 @@ import {
   parsePositiveInt,
 } from "@/modules/catalog";
 
-export function GET(request: Request) {
+export const GET = (request: Request) => {
   const { searchParams } = new URL(request.url);
 
   const search = searchParams.get("search")?.trim() || undefined;

@@ -8,11 +8,11 @@ interface CategoryFilterProps {
   onSelect: (category: Category | null) => void;
 }
 
-export function CategoryFilter({
+const CategoryFilter = ({
   categories,
   selected,
   onSelect,
-}: CategoryFilterProps) {
+}: CategoryFilterProps) => {
   const chips: { label: string; value: Category | null }[] = [
     { label: "All", value: null },
     ...categories.map((c) => ({ label: c, value: c })),
@@ -46,3 +46,5 @@ export function CategoryFilter({
     </div>
   );
 }
+
+export default CategoryFilter;

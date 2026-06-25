@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getTitleById } from "@/modules/catalog";
 
-export function GET(
+export const GET = (
   _request: Request,
   { params }: { params: { id: string } },
-) {
+) => {
   const title = getTitleById(params.id);
 
   if (!title) {
